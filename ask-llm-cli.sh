@@ -12,7 +12,7 @@ function ask() {
     # 2. Construct JSON Payload using jq for safety
     # We use the specific 4.5 Haiku model ID released Oct 2025
     local JSON_DATA=$(jq -n \
-                  --arg prompt "You are a command line expert. Output ONLY a JSON object with two properties: 'command' (the raw terminal command) and 'safe' (boolean, true if safe, false if dangerous). Do not use markdown. Do not include code blocks. Do not explain. Request: $*" \
+                  --arg prompt "You are a command line expert working on MacOS + zsh. Output ONLY a JSON object with two properties: 'command' (the raw terminal command) and 'safe' (boolean, true if safe, false if dangerous). Do not use markdown. Do not include code blocks. Do not explain. Request: $*" \
                   '{
                     model: "claude-haiku-4-5",
                     max_tokens: 150,
