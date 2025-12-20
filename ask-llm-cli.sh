@@ -57,14 +57,31 @@ function ask() {
     # 6. Confirm
     # Zsh uses -k 1, Bash uses -n 1
     if [ -n "$ZSH_VERSION" ]; then
-        read -k 1 -r "REPLY?Execute? [y/N] "
+        read -k 1 -r "REPLY?Execute? [y/e/N] "
     else
-        read -n 1 -p "Execute? [y/N] " REPLY
+        read -n 1 -p "Execute? [y/e/N] " REPLY
     fi
     echo "" # New line
 
-    # 7. Execute (Sourced)
-    if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+    # 7. Handle response
+    if [[ "$REPLY" =~ ^[Ee]$ ]]; then
+        # Edit mode: let user modify the command
+        echo -n "Edit command: "
+        if [ -n "$ZSH_VERSION" ]; then
+            vared -p "" -c CMD
+        else
+            read -e -i "$CMD" CMD
+        fi
+
+        # Execute edited command if not empty
+        if [ -n "$CMD" ]; then
+            [ -n "$ZSH_VERSION" ] && print -s "$CMD"
+            [ -n "$BASH_VERSION" ] && history -s "$CMD"
+            eval "$CMD"
+        else
+            echo "❌ Cancelled (empty command)"
+        fi
+    elif [[ "$REPLY" =~ ^[Yy]$ ]]; then
         # Save to history so you can up-arrow later
         [ -n "$ZSH_VERSION" ] && print -s "$CMD"
         [ -n "$BASH_VERSION" ] && history -s "$CMD"
