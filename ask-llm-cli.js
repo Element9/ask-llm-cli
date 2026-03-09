@@ -4,6 +4,8 @@
 
 const readline = require('readline');
 const {spawn} = require('child_process');
+const fs = require('fs');
+const tty = require('tty');
 
 const ANTHROPIC_API_KEY = process.env.ASK_LLM_CLI_ANTHROPIC_API_KEY;
 
@@ -64,29 +66,44 @@ function parseResponse(response) {
     return {cmd, isSafe};
 }
 
-function prompt(question) {
-    return new Promise((resolve) => {
-        process.stdout.write(question);
+function prompt(question, outStream = process.stdout) {
+    return new Promise((resolve, reject) => {
+        outStream.write(question);
 
-        // Enable raw mode to capture single keypress
-        process.stdin.setRawMode(true);
-        process.stdin.resume();
+        // In command substitution (e.g. cmd=$(ask --print ...)), stdin is not a TTY.
+        // Open /dev/tty directly so we can still read a keypress interactively.
+        let inputStream;
+        let shouldDestroy = false;
+
+        if (process.stdin.isTTY) {
+            inputStream = process.stdin;
+        } else {
+            try {
+                const fd = fs.openSync('/dev/tty', 'r+');
+                inputStream = new tty.ReadStream(fd);
+                shouldDestroy = true;
+            } catch (e) {
+                reject(new Error('Cannot open /dev/tty for input'));
+                return;
+            }
+        }
+
+        inputStream.setRawMode(true);
+        inputStream.resume();
 
         const onData = (buffer) => {
             const key = buffer.toString();
 
-            // Cleanup listeners and restore terminal
-            process.stdin.setRawMode(false);
-            process.stdin.pause();
-            process.stdin.removeListener('data', onData);
+            inputStream.setRawMode(false);
+            inputStream.pause();
+            inputStream.removeListener('data', onData);
+            if (shouldDestroy) inputStream.destroy();
 
-            // Echo the character and newline
-            process.stdout.write(key + '\n');
-
+            outStream.write(key + '\n');
             resolve(key);
         };
 
-        process.stdin.once('data', onData);
+        inputStream.once('data', onData);
     });
 }
 
@@ -156,7 +173,7 @@ async function main() {
                 process.stderr.write(`⚠️  ${colors.bold}${colors.red}WARNING: This command may be dangerous!${colors.reset}\n`);
                 process.stderr.write(`Command: ${colors.bold}${colors.green}${cmd}${colors.reset}\n`);
 
-                const reply = await prompt('Edit/No, don\'t execute [e/N] ');
+                const reply = await prompt('Edit/No, don\'t execute [e/N] ', process.stderr);
 
                 if (reply.toLowerCase() === 'e') {
                     process.stdout.write(cmd);
