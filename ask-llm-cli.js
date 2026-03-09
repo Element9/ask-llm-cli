@@ -2,8 +2,6 @@
 
 // requires ASK_LLM_CLI_ANTHROPIC_API_KEY env var
 
-const readline = require('readline');
-const {spawn} = require('child_process');
 const fs = require('fs');
 const tty = require('tty');
 
@@ -15,25 +13,24 @@ const colors = {
     bold: '\x1b[1m',
     red: '\x1b[31m',
     green: '\x1b[32m',
-    yellow: '\x1b[33m',
 };
 
-function clearLine(stream = process.stdout) {
-    stream.write('\r\x1b[K');
+function clearLine() {
+    process.stderr.write('\r\x1b[K');
 }
 
-function startSpinner(message, stream = process.stdout) {
+function startSpinner(message) {
     const frames = [`${message}.`, `${message}..`, `${message}...`];
     let i = 0;
-    stream.write(frames[0]);
+    process.stderr.write(frames[0]);
     const timer = setInterval(() => {
         i = (i + 1) % frames.length;
-        clearLine(stream);
-        stream.write(frames[i]);
+        clearLine();
+        process.stderr.write(frames[i]);
     }, 400);
     return () => {
         clearInterval(timer);
-        clearLine(stream);
+        clearLine();
     };
 }
 
@@ -71,7 +68,7 @@ async function callClaudeAPI(userRequest) {
         throw new Error(`API request failed (${response.status}): ${body}`);
     }
 
-    return response.json();
+    return await response.json();
 }
 
 function parseResponse(response) {
@@ -93,11 +90,11 @@ function parseResponse(response) {
     return {cmd, isSafe};
 }
 
-function prompt(question, outStream = process.stdout) {
+function prompt(question) {
     return new Promise((resolve, reject) => {
-        outStream.write(question);
+        process.stderr.write(question);
 
-        // In command substitution (e.g. cmd=$(ask --print ...)), stdin is not a TTY.
+        // In command substitution (e.g. cmd=$(ask ...)), stdin is not a TTY.
         // Open /dev/tty directly so we can still read a keypress interactively.
         let inputStream;
         let shouldDestroy = false;
@@ -126,7 +123,7 @@ function prompt(question, outStream = process.stdout) {
             inputStream.removeListener('data', onData);
             if (shouldDestroy) inputStream.destroy();
 
-            outStream.write(key + '\n');
+            process.stderr.write(key + '\n');
             resolve(key);
         };
 
@@ -134,121 +131,47 @@ function prompt(question, outStream = process.stdout) {
     });
 }
 
-function promptWithDefault(question, defaultValue) {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
-
-    return new Promise((resolve) => {
-        // Pre-fill the input with default value
-        rl.question(question, (answer) => {
-            rl.close();
-            resolve(answer || defaultValue);
-        });
-        rl.write(defaultValue);
-    });
-}
-
-function executeCommand(cmd) {
-    return new Promise((resolve) => {
-        const child = spawn(cmd, {
-            shell: true,
-            stdio: 'inherit',
-            cwd: process.cwd(),
-        });
-
-        child.on('close', (code) => {
-            resolve(code);
-        });
-    });
-}
-
 async function main() {
     const args = process.argv.slice(2);
-    const printMode = args.includes('--print');
-    const filteredArgs = args.filter((a) => a !== '--print');
 
-    if (filteredArgs.length === 0) {
-        console.log('Usage: ask <what you want to do>');
-        console.log('       ask --print <what you want to do>  (output command only, for shell integration)');
+    if (args.length === 0) {
+        process.stderr.write('Usage: ask <what you want to do>\n');
         process.exit(1);
     }
 
     if (!ANTHROPIC_API_KEY) {
-        console.error('❌ ASK_LLM_CLI_ANTHROPIC_API_KEY environment variable is required');
+        process.stderr.write('❌ ASK_LLM_CLI_ANTHROPIC_API_KEY environment variable is required\n');
         process.exit(1);
     }
 
-    const userRequest = filteredArgs.join(' ');
+    const userRequest = args.join(' ');
+    const stopSpinner = startSpinner('⏳ Asking LLM');
 
-    if (printMode) {
-        // Print mode: spinner on stderr, command on stdout
-        const stopSpinner = startSpinner('⏳ Asking LLM', process.stderr);
+    try {
+        const response = await callClaudeAPI(userRequest);
+        stopSpinner();
 
-        try {
-            const response = await callClaudeAPI(userRequest);
-            stopSpinner();
+        let {cmd, isSafe} = parseResponse(response);
 
-            let {cmd, isSafe} = parseResponse(response);
+        if (isSafe) {
+            process.stdout.write(cmd);
+        } else {
+            process.stderr.write(`⚠️  ${colors.bold}${colors.red}WARNING: This command may be dangerous!${colors.reset}\n`);
+            process.stderr.write(`Command: ${colors.bold}${colors.green}${cmd}${colors.reset}\n`);
 
-            if (isSafe) {
-                // Safe command: output directly for shell replacement
+            const reply = await prompt('Edit/Cancel [e/C] ');
+
+            if (reply.toLowerCase() === 'e') {
                 process.stdout.write(cmd);
             } else {
-                // Unsafe command: warn and ask to edit or cancel
-                process.stderr.write(`⚠️  ${colors.bold}${colors.red}WARNING: This command may be dangerous!${colors.reset}\n`);
-                process.stderr.write(`Command: ${colors.bold}${colors.green}${cmd}${colors.reset}\n`);
-
-                const reply = await prompt('Edit/No, don\'t execute [e/N] ', process.stderr);
-
-                if (reply.toLowerCase() === 'e') {
-                    process.stdout.write(cmd);
-                } else {
-                    process.stderr.write('❌ Cancelled\n');
-                    process.exit(1);
-                }
+                process.stderr.write('❌ Cancelled\n');
+                process.exit(1);
             }
-        } catch (error) {
-            stopSpinner();
-            process.stderr.write(`❌ ${error.message}\n`);
-            process.exit(1);
         }
-    } else {
-
-        // Interactive mode (original behavior)
-        const stopSpinner = startSpinner('⏳ Asking LLM');
-
-        try {
-            const response = await callClaudeAPI(userRequest);
-            stopSpinner();
-
-            let {cmd, isSafe} = parseResponse(response);
-
-            // Display with safety warning
-            if (!isSafe) {
-                console.log(`⚠️  ${colors.bold}${colors.red}WARNING: This command may be dangerous!${colors.reset}`);
-            }
-            console.log(`Command: ${colors.bold}${colors.green}${cmd}${colors.reset}`);
-
-            const reply = await prompt('Yes execute/Edit/No, don\'t execute [y/e/N] ');
-            if (reply.toLowerCase() === 'e') {
-                cmd = await promptWithDefault('Edit command: ', cmd);
-                if (cmd.trim()) {
-                    await executeCommand(cmd);
-                } else {
-                    console.log('❌ Cancelled (empty command)');
-                }
-            } else if (reply.toLowerCase() === 'y') {
-                await executeCommand(cmd);
-            } else {
-                console.log('❌ Cancelled');
-            }
-        } catch (error) {
-            stopSpinner();
-            console.log(`❌ ${error.message}`);
-            process.exit(1);
-        }
+    } catch (error) {
+        stopSpinner();
+        process.stderr.write(`❌ ${error.message}\n`);
+        process.exit(1);
     }
 }
 

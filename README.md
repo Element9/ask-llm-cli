@@ -17,7 +17,7 @@ cd ask-llm-cli
 npm install -g ask-llm-cli
 ```
 
-### Shell integration (recommended)
+### Shell integration
 
 ![Shell integration demo](shell-integration-demo.gif)
 
@@ -26,7 +26,7 @@ Add this function to your `~/.zshrc`:
 ```zsh
 ask() {
   local cmd
-  cmd=$(command ask --print "$@") || return
+  cmd=$(command ask "$@") || return
   print -z "$cmd"
 }
 ```
@@ -38,14 +38,6 @@ source ~/.zshrc
 ```
 
 This places the suggested command directly on your prompt line so you can review, edit, and press Enter to execute. The command is saved in your shell history.
-
-### Direct usage
-
-```sh
-ask "find large files"
-```
-
-This shows the suggested command and prompts you to execute (`y`), edit (`e`), or cancel (`N`).
 
 ## Usage
 

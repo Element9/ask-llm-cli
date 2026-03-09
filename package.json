@@ -4,7 +4,7 @@
   "description": "CLI tool that uses Claude to suggest shell commands",
   "main": "ask-llm-cli.js",
   "bin": {
-    "ask": "./ask-llm-cli.js"
+    "ask-llm-cli": "./ask-llm-cli.js"
   },
   "scripts": {
     "start": "node ask-llm-cli.js"
