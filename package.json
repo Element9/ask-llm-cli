@@ -1,0 +1,24 @@
+{
+  "name": "ask-llm-cli",
+  "version": "1.0.0",
+  "description": "CLI tool that uses Claude to suggest shell commands",
+  "main": "ask-llm-cli.js",
+  "bin": {
+    "ask": "./ask-llm-cli.js"
+  },
+  "scripts": {
+    "start": "node ask-llm-cli.js"
+  },
+  "keywords": [
+    "cli",
+    "claude",
+    "ai",
+    "shell",
+    "command"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
