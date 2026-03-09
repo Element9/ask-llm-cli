@@ -5,7 +5,7 @@ Describe what you want to do in plain English, get a shell command back. Powered
 ## Prerequisites
 
 - Node.js >= 18
-- An [Anthropic API key](https://console.anthropic.com/) set in ANTHROPIC_API_KEY environment variable
+- An [Anthropic API key](https://console.anthropic.com/) set in ASK_LLM_CLI_ANTHROPIC_API_KEY environment variable
 
 ## Installation
 
@@ -15,7 +15,6 @@ Install globally via npm:
 git clone https://github.com/Element9/ask-llm-cli
 cd ask-llm-cli
 npm install -g ask-llm-cli
-export ANTHROPIC_API_KEY="your-key-here"
 ```
 
 ### Shell integration (recommended)
