@@ -22,6 +22,21 @@ function clearLine(stream = process.stdout) {
     stream.write('\r\x1b[K');
 }
 
+function startSpinner(message, stream = process.stdout) {
+    const frames = [`${message}.`, `${message}..`, `${message}...`];
+    let i = 0;
+    stream.write(frames[0]);
+    const timer = setInterval(() => {
+        i = (i + 1) % frames.length;
+        clearLine(stream);
+        stream.write(frames[i]);
+    }, 400);
+    return () => {
+        clearInterval(timer);
+        clearLine(stream);
+    };
+}
+
 async function callClaudeAPI(userRequest) {
     const prompt = `You are a command line expert working on MacOS + zsh.
 Output exactly two lines, nothing else:
@@ -157,11 +172,11 @@ async function main() {
 
     if (printMode) {
         // Print mode: spinner on stderr, command on stdout
-        process.stderr.write('⏳ Asking LLM...');
+        const stopSpinner = startSpinner('⏳ Asking LLM', process.stderr);
 
         try {
             const response = await callClaudeAPI(userRequest);
-            clearLine(process.stderr);
+            stopSpinner();
 
             let {cmd, isSafe} = parseResponse(response);
 
@@ -183,18 +198,18 @@ async function main() {
                 }
             }
         } catch (error) {
-            clearLine(process.stderr);
+            stopSpinner();
             process.stderr.write(`❌ ${error.message}\n`);
             process.exit(1);
         }
     } else {
 
         // Interactive mode (original behavior)
-        process.stdout.write('⏳ Asking LLM...');
+        const stopSpinner = startSpinner('⏳ Asking LLM');
 
         try {
             const response = await callClaudeAPI(userRequest);
-            clearLine();
+            stopSpinner();
 
             let {cmd, isSafe} = parseResponse(response);
 
@@ -218,7 +233,7 @@ async function main() {
                 console.log('❌ Cancelled');
             }
         } catch (error) {
-            clearLine();
+            stopSpinner();
             console.log(`❌ ${error.message}`);
             process.exit(1);
         }
