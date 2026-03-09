@@ -19,6 +19,8 @@ npm install -g ask-llm-cli
 
 ### Shell integration (recommended)
 
+![Shell integration demo](shell-integration-demo.gif)
+
 Add this function to your `~/.zshrc`:
 
 ```zsh
