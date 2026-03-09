@@ -38,12 +38,6 @@ function startSpinner(message, stream = process.stdout) {
 }
 
 async function callClaudeAPI(userRequest) {
-    const prompt = `You are a command line expert working on MacOS + zsh.
-Output exactly two lines, nothing else:
-Line 1: the shell command (raw, no escaping needed)
-Line 2: SAFE or UNSAFE
-Request: ${userRequest}`;
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -54,7 +48,20 @@ Request: ${userRequest}`;
         body: JSON.stringify({
             model: 'claude-sonnet-4-5',
             max_tokens: 512,
-            messages: [{role: 'user', content: prompt}],
+            messages: [{role: 'user', content: `You are a command line expert working on MacOS + zsh. The user wants: ${userRequest}`}],
+            tool_choice: {type: 'tool', name: 'shell_command'},
+            tools: [{
+                name: 'shell_command',
+                description: 'Provide the shell command and its safety classification',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        command: {type: 'string', description: 'The shell command to execute'},
+                        safety: {type: 'string', enum: ['SAFE', 'UNSAFE'], description: 'SAFE if the command is read-only or benign, UNSAFE if it modifies/deletes data or is destructive'},
+                    },
+                    required: ['command', 'safety'],
+                },
+            }],
         }),
     });
 
@@ -62,21 +69,20 @@ Request: ${userRequest}`;
 }
 
 function parseResponse(response) {
-    const text = response?.content?.[0]?.text;
+    const toolUse = response?.content?.find((block) => block.type === 'tool_use');
 
-    if (!text) {
-        const errorMsg = response?.error?.message || 'Unknown error';
+    if (!toolUse) {
+        const errorMsg = response?.error?.message || 'No tool_use block in response';
         throw new Error(`API Error: ${errorMsg}\nRaw response: ${JSON.stringify(response)}`);
     }
 
-    const lines = text.trim().split('\n');
-    const cmd = lines[0];
-    const safetyLine = lines[lines.length - 1];
-    const isSafe = safetyLine !== 'UNSAFE';
+    const {command: cmd, safety} = toolUse.input;
 
     if (!cmd) {
-        throw new Error(`Failed to parse command from response\nRaw response: ${JSON.stringify(response)}`);
+        throw new Error(`Empty command in response\nRaw response: ${JSON.stringify(response)}`);
     }
+
+    const isSafe = safety === 'SAFE';
 
     return {cmd, isSafe};
 }
