@@ -24,7 +24,7 @@ Add this function to your `~/.zshrc`:
 ```zsh
 ask() {
   local cmd
-  cmd=$(ask --print "$@") || return
+  cmd=$(command ask --print "$@") || return
   print -z "$cmd"
 }
 ```
