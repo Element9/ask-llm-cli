@@ -40,6 +40,7 @@ function startSpinner(message, stream = process.stdout) {
 async function callClaudeAPI(userRequest) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
+        signal: AbortSignal.timeout(30000),
         headers: {
             'x-api-key': ANTHROPIC_API_KEY,
             'anthropic-version': '2023-06-01',
