@@ -47,7 +47,7 @@ async function callClaudeAPI(userRequest) {
             'content-type': 'application/json',
         },
         body: JSON.stringify({
-            model: 'claude-sonnet-4-5',
+            model: 'claude-sonnet-4-6',
             max_tokens: 512,
             messages: [{role: 'user', content: `You are a command line expert working on MacOS + zsh. The user wants: ${userRequest}`}],
             tool_choice: {type: 'tool', name: 'shell_command'},
