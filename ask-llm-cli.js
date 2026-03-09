@@ -65,6 +65,11 @@ async function callClaudeAPI(userRequest) {
         }),
     });
 
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`API request failed (${response.status}): ${body}`);
+    }
+
     return response.json();
 }
 
