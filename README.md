@@ -14,7 +14,7 @@ Install globally via npm:
 ```sh
 git clone https://github.com/Element9/ask-llm-cli
 cd ask-llm-cli
-npm install -g ask-llm-cli
+npm install -g
 ```
 
 ### Shell integration
