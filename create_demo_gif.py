@@ -137,11 +137,13 @@ s[0] = PROMPT + [(TYPING, TEXT)]
 cx_px = text_px_width("% ", font_bold) + text_px_width(TYPING)
 add(frames_pause(s, n=8, blink=True, cx_px=cx_px, cy=0), 100)
 
-# 4. Enter → spinner
-s = blank()
-s[0] = PROMPT + [(TYPING, DIM)]
-s[1] = [("Asking LLM...", SPIN_COL)]
-add(frames_pause(s, n=20, blink=False), 100)
+# 4. Enter → animated spinner (cycles: .  ..  ...)
+for _ in range(3):
+    for dots in [".", "..", "..."]:
+        s = blank()
+        s[0] = PROMPT + [(TYPING, DIM)]
+        s[1] = [("Asking LLM" + dots, SPIN_COL)]
+        add(frames_pause(s, n=2, blink=False), 200)
 
 # 5. Shell integration: command appears on the prompt line
 #    print -z "$cmd" — the command is placed ready to edit/run
