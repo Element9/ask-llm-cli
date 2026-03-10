@@ -2,6 +2,10 @@
 
 Describe what you want to do in plain English, get a shell command back. Powered by Claude.
 
+![Shell integration demo](shell-integration-demo.gif)
+
+It places the suggested command directly on your prompt line so you can review, edit, and press Enter to execute. The command is saved in your shell history.
+
 ## Prerequisites
 
 - Node.js >= 18
@@ -16,10 +20,6 @@ git clone https://github.com/Element9/ask-llm-cli
 cd ask-llm-cli
 npm install -g
 ```
-
-### Shell integration
-
-![Shell integration demo](shell-integration-demo.gif)
 
 Add this function to your `~/.zshrc`:
 
@@ -37,9 +37,7 @@ Then reload your shell:
 source ~/.zshrc
 ```
 
-This places the suggested command directly on your prompt line so you can review, edit, and press Enter to execute. The command is saved in your shell history.
-
-## Usage
+## Usage examples
 
 ```sh
 ask find all TODO comments in this project
